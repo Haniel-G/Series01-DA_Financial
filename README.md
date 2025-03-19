@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Exploratory Analysis of the Finance Dataset
 
 This project contains an exploratory analysis of a fictional dataset from a finance department, utilizing Python and Jupyter Notebook. I developed it with the following motivations:
@@ -56,3 +57,7 @@ This project is primarily for demonstration purposes and does not necessarily re
 ## License
 This project is licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](LICENSE).
 
+=======
+# Series01-DA_Financial
+Análise financeiro
+>>>>>>> eb034b341f60c49d0f4683c008b8e4d07f35275e
