@@ -1,0 +1,26 @@
+# Ignore backup files
+backup
+
+# Ignore database files
+*.db
+*.sqlite
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore virtual environment folders
+venv/
+.env/
+
+# Ignore Python caches
+pycache/
+*.pyc
+*.pyo
+
+# Ignore logs
+logs/
+*.log
+
+# Ignore VSCode settings
+*.vscode/
