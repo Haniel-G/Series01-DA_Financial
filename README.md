@@ -69,28 +69,20 @@ The exploratory data analysis (EDA) revealed several key insights:
    - Summary statistics provided an overview of numerical data.
    - Visualizations showed trends and anomalies in financial behavior.
 
-   **[INSERT IMAGE: Descriptive statistics]** **[INSERT IMAGE: Variable histograms]**
-
 2. **Correlation Between Variables**
 
    - Identified strong correlations between key financial indicators.
    - Some variables showed minimal impact on financial behavior.
-
-   **[INSERT IMAGE: Correlation matrix]**
 
 3. **Customer Segmentation**
 
    - Cluster analysis grouped customers based on spending behavior.
    - Helped identify high-risk customers or potential premium clients.
 
-   **[INSERT IMAGE: Customer clusters]**
-
 4. **Anomaly Detection**
 
    - Outliers indicated unusual financial transactions.
    - Potential fraud cases were detected through transaction patterns.
-
-   **[INSERT IMAGE: Detected outliers]**
 
 ## Next Steps and Suggestions
 
