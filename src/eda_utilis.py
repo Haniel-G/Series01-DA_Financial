@@ -1,4 +1,4 @@
-# Template for Exploratory Data Analysis of Financial Data
+# Tools for Exploratory Data Analysis
 
 # Importing libraries 
 import pandas as pd
@@ -6,15 +6,15 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import os
-import logging
+import sys
 
 # Debugging.
 from src.exception import CustomException
 from pathlib import Path
 from src.logger import *
-import sys
+from collections import defaultdict
 
-# Adiciona o diretório raiz do projeto ao sys.path
+# Add the src directory to the system path for module imports
 sys.path.append(os.path.abspath(os.path.join('..', 'src')))
 
 # Warnings.
@@ -27,11 +27,11 @@ palette=sns.color_palette(
     '#e85d10', '#ff8210', '#ff9c35']
 )
 
-# Function to load a dataset from a file
+# 1. Function to load a dataset from a file
 def load_data(file_path: str | Path) -> dict:
     """
-    Loads a dataset from a .csv or .xlsx file and returns a structured dictionary.
-
+    Loads a dataset from .csv or .xlsx file and returns structured dictionary.
+    
     Parameters:
         file_path (str or Path): Path to the file to be loaded.
 
@@ -50,7 +50,7 @@ def load_data(file_path: str | Path) -> dict:
         print(dataset["metadata"])  # Prints metadata information
         print(dataset["data"]["Sheet1"].head())  # Prints first rows of "Sheet1"
     """
-    file_path = Path(file_path).expanduser().resolve()  # Resolve caminho absoluto
+    file_path = Path(file_path).expanduser().resolve()
     
     if not file_path.exists():
         logging.error(f"File not found: {file_path}")
@@ -59,14 +59,15 @@ def load_data(file_path: str | Path) -> dict:
     file_extension = file_path.suffix.lower()
     
     try:
+
         if file_extension == ".xlsx":
+
             with pd.ExcelFile(file_path, engine="openpyxl") as xls:
                 sheets = {
                     sheet: pd.read_excel(xls, sheet_name=sheet) for sheet in xls.sheet_names
                 }
-            logging.info(
-                f"Excel file loaded successfully. Sheets found: {list(sheets.keys())}"
-            )
+            logging.info(f"Excel file loaded. Sheets: {list(sheets.keys())}")
+
             return {
                 "data": sheets, "metadata": {
                     "file": str(file_path), "sheets": list(sheets.keys())
@@ -74,28 +75,19 @@ def load_data(file_path: str | Path) -> dict:
             }
         
         elif file_extension == ".csv":
-            df = pd.read_csv(
-                file_path, encoding="utf-8", errors="replace", 
-                on_bad_lines="skip", dtype_backend="pyarrow"
-            )
-            logging.info(f"CSV file loaded successfully. Shape: {df.shape}")
-            return {
-                "data": df, "metadata": {
-                    "file": str(file_path), "rows": df.shape[0], "columns": df.shape[1]
-                }
-            }
+            df = pd.read_csv(file_path, encoding="utf-8", on_bad_lines="skip")
+            logging.info(f"CSV file loaded. Shape: {df.shape}")
+            return df
         
         else:
-            logging.error(f"Unsupported file format: {file_extension}")
-            raise ValueError(
-                "Unsupported file format. Please provide a .xlsx or .csv file."
-            )
+            raise ValueError("Unsupported file format. Use .xlsx or .csv")
     
     except Exception as e:
-        logging.error(f"Error loading file '{file_path}': {e}")
-        raise RuntimeError(f"Error loading file '{file_path}': {e}")
+        logging.error(f"Error loading {file_path}: {e}")
+        raise RuntimeError(f"Error loading file: {e}")
 
-# Function to display general information about the dataset
+
+# 2. Function to display general information about the dataset
 def display_info(df):
     """
     Displays general information and descriptive statistics about the dataset.
@@ -111,6 +103,7 @@ def display_info(df):
         display_info(df)
 
     """
+
     #logging.info("Displaying dataset information.")
     print("\n🔹 Dataset Info:\n")
     print(df.info())
@@ -118,7 +111,8 @@ def display_info(df):
     print("\n🔹 Descriptive Statistics:\n")
     print(df.describe())
 
-# Function to handle missing values with different strategies
+
+# 3. Function to handle missing values with different strategies
 def handle_missing_values(df, strategy=None):
     """
     Handles missing values using different strategies.
@@ -141,7 +135,7 @@ def handle_missing_values(df, strategy=None):
 
     """
     logging.info("Handling missing values.")
-    print("\n🔹 Missing Values Before Treatment:\n")
+    print("\n◇ Missing Values Before Treatment:\n")
     print(df.isnull().sum())
     
     if strategy is None:
@@ -156,15 +150,18 @@ def handle_missing_values(df, strategy=None):
     
     if strategy in strategies:
         df = strategies[strategy]
+    
     else:
         logging.error("Invalid missing value strategy.")
         raise ValueError("Invalid strategy. Choose from: 'mean', 'median', 'mode', 'drop'.")
     
-    print("\n🔹 Missing Values After Treatment:\n")
+    print("\n◇ Missing Values After Treatment:\n")
     print(df.isnull().sum())
+    
     return df
 
-# Function to convert date columns
+
+# 4. Function to convert date columns
 def convert_dates(df, columns):
     """
     Converts specified columns to datetime format.
@@ -176,11 +173,13 @@ def convert_dates(df, columns):
     Returns:
         pd.DataFrame: DataFrame with converted date columns.
 
+
     Notes:
         - Uses the format '%d/%m/%Y', ignoring conversion errors.
         - Invalid values are converted to NaT (Not a Time).
 
     Example:
+
         df = convert_dates(df, ["transaction_date"])
 
     """
@@ -188,7 +187,8 @@ def convert_dates(df, columns):
     df[columns] = df[columns].apply(pd.to_datetime, format='%d/%m/%Y', errors='coerce')
     return df
 
-# Function to format currency
+
+# 6. Function to format currency
 def format_currency(dataset, tables=None, columns=None, format_str="R$ {:,.2f}"):
     """
     Formats specified numeric columns as currency in a dictionary of DataFrames or a single DataFrame.
@@ -202,6 +202,7 @@ def format_currency(dataset, tables=None, columns=None, format_str="R$ {:,.2f}")
     Returns:
         dict or pd.DataFrame: The dataset with formatted currency values.
     """
+
     if columns is None:
         raise ValueError("You must specify at least one column to format.")
 
@@ -252,10 +253,11 @@ def format_currency(dataset, tables=None, columns=None, format_str="R$ {:,.2f}")
             "The dataset must be a dictionary with a 'data' key or a single DataFrame."
         )
 
-# Function to visualize the distribution of numeric columns
+
+# 7. Function to visualize the distribution of numeric columns
 def visualize_plots(dataset, tables=None, columns=None, plot_types=None, 
                     color='#023047', bins=30, kde=False, hue=None, 
-                    figsize=(int, int), outliers=False, mean=None, text_y=1):
+                    figsize=(18, 8), outliers=False, mean=None, text_y=1):
     """
     Generates multiple plots for selected columns, supporting both multiple tables (dict of DataFrames)
     and single DataFrame structures.
@@ -279,6 +281,7 @@ def visualize_plots(dataset, tables=None, columns=None, plot_types=None,
     selected_data = {}
 
     if isinstance(dataset, dict) and 'data' in dataset:  
+
         if tables is None:
             raise ValueError(
                 "You must specify 'tables' when working with multiple tables."
@@ -295,6 +298,7 @@ def visualize_plots(dataset, tables=None, columns=None, plot_types=None,
             raise ValueError("None of the specified columns were found.")
 
     elif isinstance(dataset, pd.DataFrame):  
+
         if tables is not None:
             raise ValueError(
                 "The 'tables' parameter should not be used when the dataset is a single DataFrame."
@@ -320,6 +324,7 @@ def visualize_plots(dataset, tables=None, columns=None, plot_types=None,
     axes = np.array(axes).reshape(num_rows, num_cols)
 
     for i, (column_name, column_data) in enumerate(selected_data.items()):
+
         row, col = divmod(i, num_cols)
         ax = axes[row, col]
         plot_type = 'boxplot' if outliers else (plot_types[i] if plot_types and i < len(plot_types) else 'histogram')
@@ -329,30 +334,45 @@ def visualize_plots(dataset, tables=None, columns=None, plot_types=None,
             x_max = np.percentile(column_data, 99.9)
             ax.set_xlim(column_data.min(), x_max)
             ax.set_title(f'Distribution of {column_name}', fontsize=12)
-            ax.set_xlabel(None, fontsize=10)
+            ax.set_xlabel(column_name, fontsize=10)
             ax.set_ylabel('Density', fontsize=10)
 
         elif plot_type == 'boxplot' or outliers:
             if isinstance(column_data, pd.Series) and not column_data.isnull().all():
                 sns.boxplot(x=column_data, color=color, ax=ax)
                 ax.set_title(f'Boxplot of {column_name}', fontsize=12)
-                ax.set_xlabel(None, fontsize=10)
+                ax.set_xlabel(column_name, fontsize=10)
+            
             else:
-                print(f"Warning: Column '{column_name}' is empty or contains only NaN values.")
+                print(
+                    f"Warning: Column '{column_name}' is empty or contains only NaN values."
+                )
 
         elif plot_type == 'barplot':
+
             if column_data.dtype == 'object' or column_data.nunique() < 15:  
                 value_counts = column_data.value_counts(normalize=True) * 100  
-                sns.barplot(x=value_counts.values, y=value_counts.index, ax=ax, color=color)
+                sns.barplot(
+                    x=value_counts.values, y=value_counts.index, ax=ax, color=color
+                )
                 ax.set_title(f'Distribution of {column_name}', fontsize=12)
                 ax.set_xlabel('Percentage (%)', fontsize=10)
+            
             else:
+
                 if mean:
                     data_grouped = dataset.groupby([column_name])[[mean]].mean().reset_index()
                     data_grouped[mean] = round(data_grouped[mean], 2)
-                    sns.barplot(x=data_grouped[mean], y=data_grouped[column_name], ax=ax, color=color)
+                    sns.barplot(
+                        x=data_grouped[mean], y=data_grouped[column_name], ax=ax, 
+                        color=color
+                    )
+                    
                     for index, value in enumerate(data_grouped[mean]):
-                        ax.text(value + text_y, index, f'{value:.1f}', va='center', fontsize=10)
+                        ax.text(
+                            value + text_y, index, f'{value:.1f}', va='center', 
+                            fontsize=10
+                        )
 
     for j in range(i + 1, num_rows * num_cols):  
         fig.delaxes(axes.flatten()[j])
@@ -360,9 +380,10 @@ def visualize_plots(dataset, tables=None, columns=None, plot_types=None,
     plt.tight_layout()
     plt.show()
 
-# Function to identify outliers using IQR
-from collections import defaultdict
-def detect_outliers(dataset, tables=None, columns=None, verbose=False, strategy=None, plot=False):
+
+# 8. Function to identify outliers using IQR
+def detect_outliers(dataset, tables=None, columns=None, verbose=False, 
+                    strategy=None, plot=False):
     """
     Identifies outliers in specified numeric columns using the IQR method,
     supports multiple tables, and optionally generates boxplots for visualization.
@@ -386,20 +407,25 @@ def detect_outliers(dataset, tables=None, columns=None, verbose=False, strategy=
 
     selected_data = {}
     
+    # Check if the dataset is a dictionary of tables or a single DataFrame
     if isinstance(dataset, dict) and 'data' in dataset:  
+        
         if tables is None:
             raise ValueError(
                 "You must specify 'tables' when working with multiple tables."
             )
 
         for table in tables:
+
             if table in dataset['data']:  
                 df = dataset['data'][table]
+
                 for column in columns:
                     if column in df.columns:
                         selected_data.setdefault(table, {})[column] = df[column]
 
     elif isinstance(dataset, pd.DataFrame):  
+
         if tables is not None:
             raise ValueError(
                 "The 'tables' parameter should not be used when the dataset is a single DataFrame."
@@ -421,7 +447,9 @@ def detect_outliers(dataset, tables=None, columns=None, verbose=False, strategy=
     cleaned_data = dataset.copy() if strategy == 'remove' else None
     stats_list = []
 
+    # Iterate through the selected data to identify outliers
     for table, columns_data in selected_data.items():
+
         for column, column_data in columns_data.items():
             q1, q3 = column_data.quantile([0.25, 0.75])
             iqr = q3 - q1
@@ -431,9 +459,11 @@ def detect_outliers(dataset, tables=None, columns=None, verbose=False, strategy=
             outliers = column_data[
                 (column_data < lower_bound) | (column_data > upper_bound)
             ]
+
             non_outliers = column_data[
                 (column_data >= lower_bound) & (column_data <= upper_bound)
             ]
+
             percentage = round((len(outliers) / len(column_data)) * 100, 2)
             
             summary[table].append(
@@ -449,7 +479,9 @@ def detect_outliers(dataset, tables=None, columns=None, verbose=False, strategy=
             
             elif strategy == 'separate analysis':
                 stats_df = pd.DataFrame({
-                    'Métrica': ['Mean', 'Median', 'Standard Deviation', 'Minimum', 'Maximum', 'Count'],
+                    'Métrica': [
+                        'Mean', 'Median', 'Standard Deviation', 'Minimum', 'Maximum', 'Count'
+                    ],
                     'All Data': [
                         column_data.mean(), column_data.median(), column_data.std(),
                         column_data.min(), column_data.max(), len(column_data)
@@ -474,6 +506,7 @@ def detect_outliers(dataset, tables=None, columns=None, verbose=False, strategy=
                 plt.show()
 
     if verbose and summary:
+
         for table, details in summary.items():
             print(f"◇ {table}")
             print("\n".join(details))
@@ -486,8 +519,10 @@ def detect_outliers(dataset, tables=None, columns=None, verbose=False, strategy=
 
     return None  # Default case if no specific strategy is selected
 
-# Function to plot 
-def plot_categorical_distribution(df_dict, columns, cols=3, figsize=(int, int), show_xlabel=False, show_ylabel=False):
+
+# 9. Function to plot 
+def plot_categorical_distribution(df_dict, columns, cols=3, figsize=(24, 12), 
+                                  show_xlabel=False, show_ylabel=False):
     """
     Generates bar plots for multiple categorical variables from multiple DataFrames.
 
@@ -503,7 +538,9 @@ def plot_categorical_distribution(df_dict, columns, cols=3, figsize=(int, int), 
 
     # Collect valid columns from each table
     for table_name, df in df_dict.items():
+
         for col in columns:
+
             if col in df.columns:
                 plot_data.append((df[col], f"{col} ({table_name})"))
 
@@ -517,6 +554,7 @@ def plot_categorical_distribution(df_dict, columns, cols=3, figsize=(int, int), 
 
     # Generate bar plots
     for i, (column_data, title) in enumerate(plot_data):
+
         ax = axes[i]
         sns.countplot(y=column_data, order=column_data.value_counts().index, palette=palette, ax=ax)
         ax.set_title(title, fontsize=14)
@@ -539,7 +577,8 @@ def plot_categorical_distribution(df_dict, columns, cols=3, figsize=(int, int), 
     plt.tight_layout()
     plt.show()
 
-# Function to calculate the coefficient of variation
+
+# 10. Function to calculate the coefficient of variation
 def coefficient_of_variation(df, columns):
     """
     Calculates the coefficient of variation for specified columns in a DataFrame.
@@ -557,14 +596,15 @@ def coefficient_of_variation(df, columns):
     - Logs the coefficient of variation for each column.
     - Logs a warning if a specified column is not found in the DataFrame.
     """
+    
     coef_vars = {}
     
     for column in columns:
+
         if column in df.columns:
             mean = df[column].mean()
             std_dev = df[column].std()
             
-            # Evitar divisão por zero
             if mean != 0:
                 coef_var = std_dev / mean
             else:
@@ -572,12 +612,14 @@ def coefficient_of_variation(df, columns):
             
             coef_vars[column] = coef_var
             logging.info(f"Coefficient of Variation for '{column}': {coef_var:.2f}")
+        
         else:
             logging.warning(f"Column '{column}' not found in DataFrame.")
     
     return coef_vars
 
-# Function to save the dataset
+
+# 11. Function to save the dataset
 def save_data(data, output_path, explicit_path=False):
     """
     Saves the dataset as an Excel (.xlsx) or CSV (.csv) file without modifying the original dataset.
@@ -613,25 +655,36 @@ def save_data(data, output_path, explicit_path=False):
     
     # Check if the dataset contains multiple sheets
     if not isinstance(data, dict) or 'data' not in data:
-        raise ValueError("The dataset must be a dictionary containing 'data' with the sheets.")
+        raise ValueError(
+            "The dataset must be a dictionary containing 'data' with the sheets."
+        )
 
     sheets = data['data']  # Extracting only the sheets
+
     if not sheets:
         raise ValueError("The dataset does not contain any sheets to save.")
 
     file_extension = os.path.splitext(output_path)[1].lower()
 
     try:
+
         if file_extension == ".xlsx":
+
             with pd.ExcelWriter(output_path) as writer:
+
                 for sheet_name, df in sheets.items():
+
                     if isinstance(df, pd.DataFrame):
                         df.to_excel(writer, sheet_name=sheet_name, index=False)
+                        
                     else:
-                        logging.warning(f"❌ Warning: '{sheet_name}' is not a DataFrame and was ignored.")
+                        logging.warning(
+                            f"Warning: '{sheet_name}' is not a DataFrame and was ignored."
+                        )
             
             if explicit_path:
                 logging.info(f"Excel file successfully saved at: {output_path}")
+
             else: 
                 logging.info(f"Excel file successfully saved.")
 
